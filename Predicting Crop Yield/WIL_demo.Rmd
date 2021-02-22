@@ -1,0 +1,146 @@
+---
+title: "Loan Estimation Using Satellite Data Analysis"
+author: "Geo Roots"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+<style type="text/css">
+body, td {
+   font-size: 20px;
+}
+code.r{
+  font-size: 20px;
+}
+pre {
+  font-size: 20px
+}
+</style>
+
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+# Loading required packages.
+library(flexdashboard)
+library("rjson")
+library(leaflet)
+library(dplyr)
+library(broom)
+library(ggplot2)
+library(raster)
+library(htmlwidgets)
+library(htmltools)
+library(plotly)
+library(maps)
+library(data.table)
+#library(plotly)knitr::opts_chunk$set(message = FALSE)
+```
+
+
+Column {data-width=600}
+-----------------------------------------------------------------------
+
+### Satellite Image Analysis.
+
+```{r,echo FALSE, warning=FALSE, message = FALSE}
+
+#setwd("/home/chandrakant/Desktop/July_2020/WIL")
+region <- rgdal::readOGR("FullSugar2.geojson",verbose = FALSE)
+
+pal <- colorNumeric(c("green","red","green"), 1:3)
+
+leaflet(region) %>% setView(149.407543,-21.670515,11) %>% addTiles() %>%
+  addPolygons(stroke = FALSE, smoothFactor = 1, fillOpacity = 0.6,
+  fillColor = ~pal(region$Attribute_table_Heatmap))
+```
+
+
+
+<!-- 
+
+<!-- result <- fromJSON(file = "phase-01-rev1.12/phase-01/data/Data/metadata/2016-12-22.json") -->
+<!-- Contry_name <- result$metadata$keywords[[2]]$name -->
+<!-- State <- result$metadata$keywords[[4]]$name -->
+<!-- Location  <- paste(result$metadata$keywords[[5]]$name,",",result$metadata$keywords[[7]]$name) -->
+<!-- Season <- result$metadata$keywords[[8]]$name -->
+
+<!-- #Day <- paste(result$metadata$keywords[[16]]$name,result$metadata$keywords[[15]]$name,',',result$metadata$keywords[[14]]$name) -->
+<!-- # Day <- "20 September 2019" -->
+<!-- # paste("COUNTRY:- ",Contry_name) -->
+<!-- # paste("STATE:- ",State) -->
+<!-- # paste("LOCATIOn:- ",Location) -->
+<!-- # paste("SEASON:- ",Season) -->
+<!-- # paste("DATE:- ",Day) -->
+
+Row {data-width=400}
+-----------------------------------------------------------------------
+### Demographic Information.
+
+*** 
+_Country:- `Australia`_
+
+_State:- `Queensland`_
+
+_Region:- `Tropical , Coastal`_
+
+_Season: `Summer`_
+
+
+
+### Crop Yield Analysis.
+
+```{r}
+agridata<-read.csv("harvest_in_metres.csv")
+colnames(agridata)<-c("Crop_Harvested_Year","Yield(Tonne)")
+agridata$`Yield(Tonne)`<-agridata$`Yield(Tonne)`*100
+setDT(agridata)[agridata$Crop_Harvested_Year>=2010 & agridata$Crop_Harvested_Year<=2019, Categories:="Observed"]
+setDT(agridata)[agridata$Crop_Harvested_Year==2020 ,Categories:="Predicted"]
+p1<- plot_ly() %>%
+  add_trace(type = "bar",
+            x = agridata$Crop_Harvested_Year,
+            y = agridata$`Yield(Tonne)`,
+          text = paste("Year:",agridata$Crop_Harvested_Year,"<br>","Revenue:",agridata$`Yield(Tonne)`,"$"),
+          legendgroup = agridata$Categories,
+          color=agridata$Categories,
+            marker = list(color = c('#008000',
+         '#008000',
+         '#008000',
+         '#008000',
+         '#008000',
+         '#008000',
+         '#008000',
+         '#008000',
+         '#008000', '#008000',
+        '#FF0000'
+         ))) %>%
+  layout(xaxis = list(showline = T,
+                      showticklabels = T,
+                      fixedrange = T,
+                      title = " Harvest per hectare per year"),
+         yaxis = list(fixedrange = T,
+                      showline=T,
+                      title = "Yield(Tonne)")) %>%
+    layout(showlegend=T)
+p1
+
+```
+
+
+### Loan Estimation.
+```{r}
+crop_input <- 3
+land_value <- 200000
+ndvi <- 0.988
+final_loan_amount <- crop_input * land_value * ndvi
+numericInput('Crop', 'Crop Yield', crop_input,
+              min = 1, max = 9)
+numericInput('Land value', 'Land Value', land_value,
+              min = 1, max = 9)
+numericInput('NDVI', 'NDVI Value', ndvi,
+              min = 1, max = 9)
+```
+__The estimated loan amount is: `592,800 AUD`__
+
